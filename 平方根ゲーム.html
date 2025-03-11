@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>平方根ペア探しゲーム</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            text-align: center;
+            margin: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 120px);
+            grid-gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .card {
+            width: 120px;
+            height: 80px;
+            background-color: #e0e0e0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #000;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            border: 2px solid #b0bec5;
+            user-select: none;
+        }
+        .card.matched {
+            background-color: #c8e6c9;
+            border-color: #4caf50;
+            color: #4caf50;
+            pointer-events: none;
+            animation: bounce 0.3s ease;
+        }
+        .card.matched::after {
+            content: "〇";
+            font-size: 30px;
+            color: #4caf50;
+            position: absolute;
+            top: -5px;
+            right: 5px;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        #status {
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #win-message {
+            font-size: 28px;
+            color: #ff4081;
+            margin-top: 20px;
+            animation: pop 0.5s ease;
+            display: none;
+            opacity: 0;
+            transform: scale(0.5);
+        }
+        @keyframes pop {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .sparkle {
+            font-size: 40px;
+            color: #ff4081;
+            position: absolute;
+            animation: sparkle 1s ease infinite;
+        }
+        @keyframes sparkle {
+            0% { transform: scale(0.8); opacity: 0.6; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(0.8); opacity: 0.6; }
+        }
+    </style>
+</head>
+<body>
+
+<h1>平方根ペア探しゲーム</h1>
+<div id="status">
+    <span id="timer">タイム: 0秒</span>
+</div>
+<div id="game-board"></div>
+<div id="win-message">🎉 クリア！おめでとう！ 🎉</div>
+<button id="restart-button">リスタート</button>
+
+<!-- ✅ Google ドライブから音声を読み込む -->
+<audio id="correct-sound" src="https://drive.google.com/uc?id=1mMvlkGYyJm5_Wmohetd0eoEptyzn0yWz&export=download"></audio>
+<audio id="win-sound" src="https://drive.google.com/uc?id=1Xy5t969oSfljA8z3I5_o3r6bWubC5RDj&export=download"></audio>
+
+<script>
+    const pairs = [
+        ['√4', '2'],
+        ['√9', '3'],
+        ['√16', '4'],
+        ['√25', '5'],
+        ['√36', '6'],
+        ['√49', '7'],
+        ['√64', '8'],
+        ['√81', '9']
+    ];
+
+    let openedCards = [];
+    let matchedCards = [];
+    let startTime;
+    let timerInterval;
+
+    function startGame() {
+        const board = document.getElementById('game-board');
+        board.innerHTML = '';
+        openedCards = [];
+        matchedCards = [];
+        document.getElementById('win-message').style.display = 'none';
+
+        const allCards = pairs.flatMap(pair => [
+            { value: pair[0], match: pair[1] },
+            { value: pair[1], match: pair[0] }
+        ]);
+        const shuffledCards = allCards.sort(() => Math.random() - 0.5);
+
+        shuffledCards.forEach(card => {
+            const cardElement = document.createElement('div');
+            cardElement.classList.add('card');
+            cardElement.innerText = card.value;
+            cardElement.dataset.match = card.match;
+            cardElement.addEventListener('click', flipCard);
+            board.appendChild(cardElement);
+        });
+
+        startTime = Date.now();
+        timerInterval = setInterval(updateTimer, 100);
+    }
+
+    function flipCard(event) {
+        const card = event.target;
+        if (!card.classList.contains('matched') && openedCards.length < 2) {
+            openedCards.push(card);
+            if (openedCards.length === 2) {
+                checkMatch();
+            }
+        }
+    }
+
+    function checkMatch() {
+        const [card1, card2] = openedCards;
+        if (card1.innerText === card2.dataset.match) {
+            card1.classList.add('matched');
+            card2.classList.add('matched');
+            document.getElementById('correct-sound').play();
+            matchedCards.push(card1, card2);
+            if (matchedCards.length === pairs.length * 2) {
+                setTimeout(winGame, 500);
+            }
+        }
+        openedCards = [];
+    }
+
+    function updateTimer() {
+        const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1);
+        document.getElementById('timer').innerText = `タイム: ${elapsedTime}秒`;
+    }
+
+    function winGame() {
+        clearInterval(timerInterval);
+        document.getElementById('win-sound').play();
+        document.getElementById('win-message').style.display = 'block';
+    }
+
+    document.getElementById('restart-button').addEventListener('click', startGame);
+
+    startGame();
+</script>
+
+</body>
+</html>
